@@ -1,10 +1,9 @@
-// client.go in the path: internal/pkg/db/sql/client
-
 package client
 
 import (
 	"context"
 	"fmt"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"sync"
 )
@@ -23,6 +22,8 @@ type SqlClient struct {
 	Config Config
 	Conn   *sqlx.DB
 }
+
+var DatabaseInstance *SqlClient
 
 func NewSqlClient(cfg Config) *SqlClient {
 	return &SqlClient{Config: cfg}
@@ -44,7 +45,6 @@ func (sc *SqlClient) Init(ctx context.Context) error {
 	}
 
 	sc.Conn = conn
+	DatabaseInstance = sc
 	return sc.Conn.PingContext(ctx)
 }
-
-// ... You can expand this file with more methods, error handling, etc.
