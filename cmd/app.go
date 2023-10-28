@@ -1,13 +1,13 @@
-// cmd/app.go
-
 package cmd
 
 import (
 	"context"
-	"github.com/hridayakandel/fine-grain-auth/internal/pkg/db/sql/client"
-	"github.com/hridayakandel/fine-grain-auth/internal/pkg/router"
 	"log"
 	"net/http"
+
+	"github.com/hridayakandel/fine-grain-auth/internal/apps/ciam/handler"
+	"github.com/hridayakandel/fine-grain-auth/internal/pkg/db/sql/client"
+	"github.com/hridayakandel/fine-grain-auth/pkg/router"
 )
 
 var (
@@ -24,15 +24,19 @@ var (
 
 func Start() error {
 	// Initialize the database
-	err := initializeDatabase()
+	dbClient, err := initializeDatabase()
 	if err != nil {
 		log.Fatalf("Failed to initialize the database: %s", err)
 		return err
 	}
 
-	// Setup routes using the router package
-	r := router.SetupRouter()
+	// Initialize the store handler
+	storeHandler := handler.NewStoreHandler(dbClient)
 
+	// Setup the router
+	r := router.SetupRouter(storeHandler)
+
+	// Start the server with the router
 	http.Handle("/", r)
 	err = http.ListenAndServe(serverAddress, nil)
 	if err != nil {
@@ -43,7 +47,8 @@ func Start() error {
 	return nil
 }
 
-func initializeDatabase() error {
+func initializeDatabase() (*client.SqlClient, error) {
 	sqlClient := client.NewSqlClient(dbConfig)
-	return sqlClient.Init(context.Background())
+	err := sqlClient.Init(context.Background())
+	return sqlClient, err
 }

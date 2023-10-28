@@ -1,5 +1,3 @@
-// pkg/router/router.go
-
 package router
 
 import (
@@ -7,14 +5,15 @@ import (
 	"github.com/hridayakandel/fine-grain-auth/internal/apps/ciam/handler"
 )
 
-func SetupRouter() *mux.Router {
+// SetupRouter sets up the routes and returns the router instance.
+func SetupRouter(storeHandler *handler.StoreHandler) *mux.Router {
 	r := mux.NewRouter()
 
 	// Setting up the stores endpoints
-	s := r.PathPrefix("/stores").Subrouter()
-	s.HandleFunc("", handler.CreateStoreHandler).Methods("POST")
+	storeSubRouter := r.PathPrefix("/stores").Subrouter()
+	storeSubRouter.HandleFunc("", storeHandler.CreateStore).Methods("POST")
 
-	// ... You can expand this with more routes and middlewares
+	// You can add more routes and sub-routers as needed
 
 	return r
 }
