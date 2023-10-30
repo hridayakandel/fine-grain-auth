@@ -1,54 +1,44 @@
 package cmd
 
 import (
-	"context"
+	"github.com/gorilla/mux"
+	"github.com/hridayakandel/fine-grain-auth/internal/apps/ciam"
+	"github.com/hridayakandel/fine-grain-auth/internal/pkg/db/sql/client"
 	"log"
 	"net/http"
-
-	"github.com/hridayakandel/fine-grain-auth/internal/apps/ciam/handler"
-	"github.com/hridayakandel/fine-grain-auth/internal/pkg/db/sql/client"
-	"github.com/hridayakandel/fine-grain-auth/pkg/router"
 )
 
-var (
-	serverAddress = ":8080"
-	dbConfig      = client.Config{
-		Database: "postgres",
-		HostName: "localhost",
-		PortNos:  5432,
-		UserName: "postgres",
-		Password: "password",
-		SSLMode:  "disable",
-	}
-)
+const serverAddress = ":8080"
 
-func Start() error {
-	// Initialize the database
-	dbClient, err := initializeDatabase()
-	if err != nil {
-		log.Fatalf("Failed to initialize the database: %s", err)
-		return err
-	}
-
-	// Initialize the store handler
-	storeHandler := handler.NewStoreHandler(dbClient)
-
-	// Setup the router
-	r := router.SetupRouter(storeHandler)
-
-	// Start the server with the router
-	http.Handle("/", r)
-	err = http.ListenAndServe(serverAddress, nil)
-	if err != nil {
-		log.Fatalf("Error occurred: %s", err)
-		return err
-	}
-
-	return nil
+var dbConfig = client.Config{
+	Database: "postgres",
+	HostName: "localhost",
+	PortNos:  5432,
+	UserName: "postgres",
+	Password: "password",
+	SSLMode:  "disable",
 }
 
-func initializeDatabase() (*client.SqlClient, error) {
+func Start() error {
+	// Create and initialize a new SQL client
 	sqlClient := client.NewSqlClient(dbConfig)
-	err := sqlClient.Init(context.Background())
-	return sqlClient, err
+	if err := sqlClient.Init(); err != nil {
+		return err
+	}
+
+	// Create and initialize the main application
+	app := ciam.NewApp()
+	if err := app.Init(*sqlClient); err != nil { // pass the SQL client by value
+		return err
+	}
+
+	// Create a new router
+	router := mux.NewRouter()
+	// Register app routes (this step will connect your app's routes to the main router)
+	appRouter := app.GetRouter()
+	router.PathPrefix("/").Handler(appRouter)
+
+	// Start the server
+	log.Println("Starting server on", serverAddress)
+	return http.ListenAndServe(serverAddress, router)
 }

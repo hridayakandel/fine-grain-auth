@@ -1,22 +1,34 @@
 package ciam
 
 import (
-	"context"
 	"github.com/gorilla/mux"
 	"github.com/hridayakandel/fine-grain-auth/internal/apps/ciam/handler"
 	"github.com/hridayakandel/fine-grain-auth/internal/pkg/db/sql/client"
 )
 
 type App struct {
-	storeHandler *handler.StoreHandler
+	store  handler.StoreHandler
+	router *mux.Router
 }
 
-func (a *App) Init(ctx context.Context, dbClient *client.SqlClient) error {
-	a.storeHandler = handler.NewStoreHandler(dbClient)
+func NewApp() *App {
+	return &App{}
+}
+
+func (a *App) Init(sql client.SqlClient) error {
+	storeHandler := handler.NewStoreHandlerConfig()
+	if err := storeHandler.Init(&sql); err != nil {
+		return err
+	}
+	a.store = storeHandler
+
+	// Initialize the router and register routes
+	a.router = mux.NewRouter()
+	a.store.Register("/stores", a.router)
+
 	return nil
 }
 
-func (a *App) Register(r *mux.Router) {
-	storeRoutes := r.PathPrefix("/stores").Subrouter()
-	storeRoutes.HandleFunc("", a.storeHandler.CreateStore).Methods("POST")
+func (a *App) GetRouter() *mux.Router {
+	return a.router
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
-	"sync"
 )
 
 type Config struct {
@@ -18,18 +17,15 @@ type Config struct {
 }
 
 type SqlClient struct {
-	sync.Mutex
-	Config Config
 	Conn   *sqlx.DB
+	Config Config // <-- Added this field
 }
-
-var DatabaseInstance *SqlClient
 
 func NewSqlClient(cfg Config) *SqlClient {
-	return &SqlClient{Config: cfg}
+	return &SqlClient{Config: cfg} // <-- Set the config here
 }
 
-func (sc *SqlClient) Init(ctx context.Context) error {
+func (sc *SqlClient) Init() error {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		sc.Config.HostName,
 		sc.Config.PortNos,
@@ -40,11 +36,33 @@ func (sc *SqlClient) Init(ctx context.Context) error {
 	)
 
 	conn, err := sqlx.Open("pgx", connStr)
+	// Note the use of "postgres" instead of "pgx"
 	if err != nil {
 		return err
 	}
 
 	sc.Conn = conn
-	DatabaseInstance = sc
-	return sc.Conn.PingContext(ctx)
+	return sc.Conn.PingContext(context.Background())
+}
+func (sc *SqlClient) NamedQueryExecution(props *PrepareNamedWithContextProps) error {
+	// Convert generic interface{} Args to named.Arg
+
+	// Using named query to bind parameters to SQL query
+	rows, err := sc.Conn.NamedQueryContext(props.Ctx, props.Query, props.Args)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// If a destination is provided, scan the result into it
+	if props.Dest != nil {
+		if rows.Next() {
+			err = rows.StructScan(props.Dest)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

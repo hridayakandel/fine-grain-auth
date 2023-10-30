@@ -31,3 +31,10 @@ type PrepareNamedTxWithContextProps struct {
 	Dest  interface{}
 	Args  interface{}
 }
+
+type PrepareNamedWithContextProps struct {
+	Ctx   context.Context
+	Query string
+	Dest  interface{}
+	Args  interface{}
+}

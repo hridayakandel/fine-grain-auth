@@ -2,7 +2,7 @@ package types
 
 import "time"
 
-type Store struct {
+type StoreCreateArg struct {
 	ID        string    `db:"id"`
 	Name      string    `db:"name"`
 	CreatedAt time.Time `db:"created_at"`

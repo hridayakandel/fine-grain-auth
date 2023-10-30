@@ -8,7 +8,7 @@ import (
 func main() {
 	err := cmd.Start()
 	if err != nil {
-		log.Fatalf("Error failing to start server: %s", err)
+		log.Fatalf("Error starting server: %s", err)
 	}
 	log.Println("fine-grain-auth service shutdown: Application stopped")
 }
